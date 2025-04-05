@@ -82,34 +82,62 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
   }
 
   Future<void> buyCrop() async {
-    final newQty = widget.cropData['quantity'] - _quantity;
-    if (newQty < 0) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Not enough quantity available')));
-      return;
+    final cropRef = FirebaseFirestore.instance.collection('crops').doc(widget.cropId);
+    final buyerId = FirebaseAuth.instance.currentUser!.uid;
+
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final cropSnapshot = await transaction.get(cropRef);
+
+        if (!cropSnapshot.exists) throw Exception("Crop not found");
+
+        final cropData = cropSnapshot.data()!;
+        final currentQty = cropData['quantity'];
+        final price = cropData['price'];
+        final farmerId = cropData['farmerId'];
+        final cropName = cropData['name'];
+
+        if (_quantity > currentQty) {
+          throw Exception("Not enough quantity available");
+        }
+
+        final newQty = currentQty - _quantity;
+        final total = price * _quantity;
+
+        transaction.update(cropRef, {'quantity': newQty});
+
+        final purchaseRef = FirebaseFirestore.instance.collection('purchases').doc();
+        transaction.set(purchaseRef, {
+          'cropId': widget.cropId,
+          'farmerId': farmerId,
+          'buyerId': buyerId,
+          'quantity': _quantity,
+          'price': price,
+          'total': total,
+          'timestamp': Timestamp.now(),
+        });
+
+        final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        transaction.set(notifRef, {
+          'farmerId': farmerId,
+          'title': 'New Purchase',
+          'body': 'A buyer bought $_quantity kg of $cropName',
+          'timestamp': Timestamp.now(),
+        });
+
+        setState(() {
+          widget.cropData['quantity'] = newQty;
+        });
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Purchase successful!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
     }
-
-    await FirebaseFirestore.instance.collection('crops').doc(widget.cropId).update({
-      'quantity': newQty,
-    });
-
-    await FirebaseFirestore.instance.collection('purchases').add({
-      'cropId': widget.cropId,
-      'farmerId': widget.cropData['farmerId'],
-      'buyerId': FirebaseAuth.instance.currentUser!.uid,
-      'quantity': _quantity,
-      'price': widget.cropData['price'],
-      'total': _quantity * widget.cropData['price'],
-      'timestamp': Timestamp.now(),
-    });
-
-    await FirebaseFirestore.instance.collection('notifications').add({
-      'farmerId': widget.cropData['farmerId'],
-      'title': 'New Purchase',
-      'body': 'A buyer bought $_quantity kg of ${widget.cropData['name']}',
-      'timestamp': Timestamp.now(),
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Purchase successful!')));
   }
 
   @override
@@ -117,146 +145,175 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     final crop = widget.cropData;
 
     return Scaffold(
-      appBar: AppBar(title: Text(crop['name'])),
+      appBar: AppBar(
+        title: Text(crop['name'], style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        backgroundColor: Colors.teal.shade600,
+        elevation: 3,
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.indigo.shade800, Colors.indigo.shade400],
+            colors: [Colors.teal.shade50, Colors.blueGrey.shade50],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: ListView(
           children: [
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(crop['name'], style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    Text("Price: ₹${crop['price']}"),
-                    Text("Available: ${crop['quantity']} kg"),
-                    Text("Harvest Date: ${crop['harvestDate']}"),
-                    Text("Location: ${crop['location']}"),
-                    Text("Description: ${crop['description']}"),
-                    Text("Pricing Type: ${crop['pricingType']}"),
-                    SizedBox(height: 16),
-                    if (farmerData != null)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Farmer Details", style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text("Name: ${farmerData!['name']}"),
-                          Text("Email: ${farmerData!['email']}"),
-                        ],
-                      ),
-                  ],
-                ),
+            buildCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(crop['name'], style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+                  SizedBox(height: 10),
+                  detailRow("Price", "₹${crop['price']}"),
+                  detailRow("Available", "${crop['quantity']} kg"),
+                  detailRow("Harvest Date", "${crop['harvestDate']}"),
+                  detailRow("Location", "${crop['location']}"),
+                  SizedBox(height: 10),
+                  Text("Description", style: TextStyle(fontWeight: FontWeight.w600)),
+                  Text(crop['description'], style: TextStyle(color: Colors.black87)),
+                  SizedBox(height: 10),
+                  Text("Pricing Type: ${crop['pricingType']}", style: TextStyle(color: Colors.grey.shade700)),
+                  if (farmerData != null) ...[
+                    Divider(height: 30),
+                    Text("Farmer Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                    Text("Name: ${farmerData!['name']}"),
+                    Text("Email: ${farmerData!['email']}"),
+                  ]
+                ],
               ),
             ),
-            SizedBox(height: 16),
-            Card(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _messageController,
-                      decoration: InputDecoration(labelText: 'Send a message'),
-                    ),
-                    SizedBox(height: 10),
-                    ElevatedButton(
-                      onPressed: () => sendMessage(_messageController.text),
-                      child: Text('Send Message'),
-                    ),
-                  ],
-                ),
+            buildCard(
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _messageController,
+                    decoration: inputDecoration("Send a message"),
+                  ),
+                  SizedBox(height: 12),
+                  buildButton("Send Message", Colors.teal, () {
+                    sendMessage(_messageController.text);
+                  }),
+                ],
               ),
             ),
-            SizedBox(height: 16),
-            if (crop['pricingType'] == 'fixed') ...[
-              Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Text('Quantity:'),
-                          SizedBox(width: 10),
-                          DropdownButton<int>(
-                            value: _quantity,
-                            onChanged: (val) => setState(() => _quantity = val!),
-                            items: List.generate(crop['quantity'], (i) => i + 1)
-                                .map((e) => DropdownMenuItem(value: e, child: Text('$e kg')))
-                                .toList(),
-                          ),
-                        ],
-                      ),
-                      ElevatedButton(
-                        onPressed: buyCrop,
-                        child: Text('Buy Now'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ] else if (crop['pricingType'] == 'bidding') ...[
-              Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _bidController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: 'Enter your bid (₹)'),
-                      ),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () => placeBid(double.parse(_bidController.text)),
-                        child: Text('Place Bid'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ] else if (crop['pricingType'] == 'negotiable') ...[
-              Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _negotiateController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(labelText: 'Propose your price (₹)'),
-                      ),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () => negotiatePrice(double.parse(_negotiateController.text)),
-                        child: Text('Send Offer'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+            if (crop['pricingType'] == 'fixed') buildFixedPricingCard(crop),
+            if (crop['pricingType'] == 'bidding') buildBidCard(),
+            if (crop['pricingType'] == 'negotiable') buildNegotiationCard(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget buildCard({required Widget child}) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 3,
+      margin: EdgeInsets.only(bottom: 20),
+      child: Padding(
+        padding: EdgeInsets.all(18),
+        child: child,
+      ),
+    );
+  }
+
+  Widget detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text("$label: ", style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(value),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    );
+  }
+
+  Widget buildButton(String label, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+      ),
+      onPressed: onPressed,
+      child: Text(label, style: TextStyle(fontSize: 16, color: Colors.white)),
+    );
+  }
+
+  Widget buildFixedPricingCard(Map<String, dynamic> crop) {
+    return buildCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text('Quantity:', style: TextStyle(fontSize: 16)),
+              SizedBox(width: 12),
+              DropdownButton<int>(
+                value: _quantity,
+                onChanged: crop['quantity'] == 0 ? null : (val) => setState(() => _quantity = val!),
+                items: List.generate(crop['quantity'], (i) => i + 1)
+                    .map((e) => DropdownMenuItem(value: e, child: Text('$e kg')))
+                    .toList(),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          buildButton(
+            crop['quantity'] == 0 ? 'Sold Out' : 'Buy Now',
+            crop['quantity'] == 0 ? Colors.grey : Colors.green.shade600,
+            crop['quantity'] == 0 ? () {} : buyCrop,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget buildBidCard() {
+    return buildCard(
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _bidController,
+            keyboardType: TextInputType.number,
+            decoration: inputDecoration("Enter your bid (₹)"),
+          ),
+          SizedBox(height: 12),
+          buildButton("Place Bid", Colors.orange.shade700, () {
+            placeBid(double.parse(_bidController.text));
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget buildNegotiationCard() {
+    return buildCard(
+      child: Column(
+        children: [
+          TextFormField(
+            controller: _negotiateController,
+            keyboardType: TextInputType.number,
+            decoration: inputDecoration("Propose your price (₹)"),
+          ),
+          SizedBox(height: 12),
+          buildButton("Send Offer", Colors.purple.shade600, () {
+            negotiatePrice(double.parse(_negotiateController.text));
+          }),
+        ],
       ),
     );
   }
