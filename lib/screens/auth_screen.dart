@@ -14,6 +14,9 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   bool _isLoading = false;
+
+
+
   void _login() async {
     setState(() {
       _isLoading = true;
