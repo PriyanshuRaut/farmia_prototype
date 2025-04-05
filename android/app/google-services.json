@@ -1,0 +1,159 @@
+{
+  "project_info": {
+    "project_number": "611669901957",
+    "firebase_url": "https://master-helper-b73a7.firebaseio.com",
+    "project_id": "master-helper-b73a7",
+    "storage_bucket": "master-helper-b73a7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611669901957:android:0aac7e7dab8988a2fe5fec",
+        "android_client_info": {
+          "package_name": "com.master.helper"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "611669901957-rhbikmt5udgaoepavjsvo0pc4rfm1a4e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.master.helper",
+            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
+          }
+        },
+        {
+          "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ78sMO1he6Hn_lt0T4wEkmnfwZQs1YMs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611669901957:android:145f66412a65d2c7fe5fec",
+        "android_client_info": {
+          "package_name": "com.masterringtonepro"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "611669901957-aif5nb06op90cr595gof9pl181mo5d1h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.masterringtonepro",
+            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
+          }
+        },
+        {
+          "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ78sMO1he6Hn_lt0T4wEkmnfwZQs1YMs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611669901957:android:09da4731d90ca50cfe5fec",
+        "android_client_info": {
+          "package_name": "com.masters.farmia_prototype"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ78sMO1he6Hn_lt0T4wEkmnfwZQs1YMs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611669901957:android:f4e4848f98988c18fe5fec",
+        "android_client_info": {
+          "package_name": "com.rautgames.tictactoe"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "611669901957-3810m4dli2h0miof80n6c7r5gcfm0b75.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rautgames.tictactoe",
+            "certificate_hash": "93fe942ee8afd4ce4c442913e2c89e45164be2e9"
+          }
+        },
+        {
+          "client_id": "611669901957-44fcoggobgobk8i8qrdbpoa5hmostmb2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.rautgames.tictactoe",
+            "certificate_hash": "9018821518ea288ed0ee1aaa5fd084a4abcf4f8b"
+          }
+        },
+        {
+          "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDJ78sMO1he6Hn_lt0T4wEkmnfwZQs1YMs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "611669901957-53vbh48natln3c6a277pphed60smb5uk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
