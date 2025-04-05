@@ -54,6 +54,7 @@ class FarmiaPrototype extends StatelessWidget {
         '/register': (context) => RegisterScreen(),
         '/farmer': (context) => FarmerScreen(),
         '/buyer': (context) => BuyerScreen(),
+        '/login': (context) => AuthScreen(),
       },
     );
   }

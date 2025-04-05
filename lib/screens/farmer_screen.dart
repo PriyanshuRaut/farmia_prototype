@@ -7,7 +7,8 @@ class FarmerScreen extends StatefulWidget {
   _FarmerScreenState createState() => _FarmerScreenState();
 }
 
-class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderStateMixin {
+class _FarmerScreenState extends State<FarmerScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   final _formKey = GlobalKey<FormState>();
@@ -17,18 +18,21 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
   final TextEditingController _harvestDate = TextEditingController();
   final TextEditingController _location = TextEditingController();
   final TextEditingController _description = TextEditingController();
+  final Color primaryGreen = Color(0xFF4CAF50);
+  final Color backgroundGrey = Color(0xFFF5F5F5);
+
   String _pricingType = 'fixed';
   bool _isSubmitting = false;
 
   @override
   void initState() {
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     super.initState();
   }
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(context, '/');
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   void _submitCrop() async {
@@ -49,7 +53,8 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
           'timestamp': Timestamp.now(),
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Crop added successfully!')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Crop added successfully!')));
 
         _cropName.clear();
         _price.clear();
@@ -59,7 +64,8 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
         _description.clear();
         setState(() => _pricingType = 'fixed');
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
 
       setState(() => _isSubmitting = false);
@@ -82,53 +88,97 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
     String uid = FirebaseAuth.instance.currentUser!.uid;
     final user = FirebaseAuth.instance.currentUser;
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('crops').where('farmerId', isEqualTo: uid).snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
-
-        final crops = snapshot.data!.docs;
-        double totalEarnings = 0;
-        for (var doc in crops) {
-          totalEarnings += (doc['price'] as double) * (doc['quantity'] as int);
-        }
-
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Dashboard', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              SizedBox(height: 20),
-              Card(
-                elevation: 3,
-                child: ListTile(
-                  title: Text('Farmer Info'),
-                  subtitle: Text('Email: ${user?.email ?? "N/A"}\nUID: ${user?.uid}'),
-                ),
+    return Container(
+      color: backgroundGrey,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Dashboard',
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: primaryGreen)),
+            SizedBox(height: 20),
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              elevation: 4,
+              color: Colors.white,
+              child: ListTile(
+                title: Text('Farmer Info'),
+                subtitle: Text('Email: ${user?.email ?? "N/A"}'),
               ),
-              SizedBox(height: 20),
-              Card(
-                elevation: 3,
-                child: ListTile(
-                  title: Text('Total Crops'),
-                  trailing: Text('${crops.length}'),
-                ),
-              ),
-              Card(
-                elevation: 3,
-                child: ListTile(
-                  title: Text('Estimated Earnings'),
-                  trailing: Text('₹${totalEarnings.toStringAsFixed(2)}'),
-                ),
-              ),
-              SizedBox(height: 20),
-              Text('Your Crops', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              ...crops.map((doc) => _buildCropCard(doc)).toList(),
-            ],
-          ),
-        );
-      },
+            ),
+            SizedBox(height: 16),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('crops')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                int totalCrops = snapshot.hasData ? snapshot.data!.docs.length : 0;
+                return Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
+                  elevation: 4,
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text('Total Crops'),
+                    trailing: Text('$totalCrops',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 10),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('purchases')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                double totalEarnings = 0;
+                if (snapshot.hasData) {
+                  snapshot.data!.docs.forEach((doc) {
+                    totalEarnings += (doc['total'] as num).toDouble();
+                  });
+                }
+                return Card(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
+                  elevation: 4,
+                  color: Colors.white,
+                  child: ListTile(
+                    title: Text('Estimated Earnings'),
+                    trailing: Text('₹${totalEarnings.toStringAsFixed(2)}',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                );
+              },
+            ),
+            SizedBox(height: 20),
+            Text('Your Crops',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('crops')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return Center(child: CircularProgressIndicator());
+                final crops = snapshot.data!.docs;
+                return Column(
+                  children:
+                  crops.map((doc) => _buildCropCard(doc)).toList(),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -148,7 +198,8 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
             GestureDetector(
               onTap: _showDatePicker,
               child: AbsorbPointer(
-                child: _buildTextField(_harvestDate, 'Harvest Date (YYYY-MM-DD)'),
+                child: _buildTextField(
+                    _harvestDate, 'Harvest Date (YYYY-MM-DD)'),
               ),
             ),
             SizedBox(height: 10),
@@ -159,7 +210,8 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
             DropdownButtonFormField<String>(
               value: _pricingType,
               items: ['fixed', 'bidding', 'negotiable']
-                  .map((type) => DropdownMenuItem(value: type, child: Text(type.toUpperCase())))
+                  .map((type) => DropdownMenuItem(
+                  value: type, child: Text(type.toUpperCase())))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _pricingType = value);
@@ -175,9 +227,16 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
             _isSubmitting
                 ? CircularProgressIndicator()
                 : ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primaryGreen,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding:
+                EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+              ),
               onPressed: _submitCrop,
-              child: Text('Submit Crop'),
-              style: ElevatedButton.styleFrom(padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32)),
+              child: Text('Submit Crop',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -187,37 +246,91 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
 
   Widget _buildYourCropsTab() {
     String uid = FirebaseAuth.instance.currentUser!.uid;
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('crops').where('farmerId', isEqualTo: uid).snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+    return Container(
+      color: backgroundGrey,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('crops')
+            .where('farmerId', isEqualTo: uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
+                child: Text('No crops added yet.',
+                    style: TextStyle(fontSize: 16)));
+          }
+          return ListView.builder(
+            padding: EdgeInsets.all(12),
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              return _buildCropCard(doc);
+            },
+          );
+        },
+      ),
+    );
+  }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(child: Text('No crops added yet.'));
-        }
-
-        return ListView(
-          padding: EdgeInsets.all(8),
-          children: snapshot.data!.docs.map((doc) => _buildCropCard(doc)).toList(),
-        );
-      },
+  Widget _buildNotificationsTab() {
+    String uid = FirebaseAuth.instance.currentUser!.uid;
+    return Container(
+      color: backgroundGrey,
+      child: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('notifications')
+            .where('farmerId', isEqualTo: uid)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
+          final notifications = snapshot.data!.docs;
+          if (notifications.isEmpty) {
+            return Center(child: Text('No notifications yet.'));
+          }
+          return ListView.builder(
+            padding: EdgeInsets.all(12),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final data = notifications[index].data() as Map<String, dynamic>;
+              return Card(
+                child: ListTile(
+                  title: Text(data['title'] ?? 'Notification'),
+                  subtitle: Text(data['body'] ?? ''),
+                  trailing: Text(
+                    data['timestamp'] != null
+                        ? (data['timestamp'] as Timestamp)
+                        .toDate()
+                        .toString()
+                        : '',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildCropCard(DocumentSnapshot crop) {
     final cropData = crop.data() as Map<String, dynamic>;
-
     return Card(
       child: ListTile(
         title: Text(cropData['name']),
         subtitle: Text(
-          '₹${cropData['price']} × ${cropData['quantity']}kg\n'
-              'Harvest: ${cropData['harvestDate']} | ${cropData['pricingType'].toUpperCase()}',
+          '₹${cropData['price']} × ${cropData['quantity']}kg\nHarvest: ${cropData['harvestDate']} | ${cropData['pricingType'].toUpperCase()}',
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'edit') {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => EditCropScreen(crop: crop)));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => EditCropScreen(crop: crop)));
             } else if (value == 'delete') {
               FirebaseFirestore.instance.collection('crops').doc(crop.id).delete();
             }
@@ -231,16 +344,19 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {bool isNumber = false}) {
+  Widget _buildTextField(TextEditingController controller, String label,
+      {bool isNumber = false}) {
     return TextFormField(
       controller: controller,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      validator: (value) => value == null || value.isEmpty ? 'Please enter $label' : null,
+      validator: (value) =>
+      value == null || value.isEmpty ? 'Please enter $label' : null,
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
         labelText: label,
-        border: OutlineInputBorder(),
+        labelStyle: TextStyle(color: primaryGreen),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -248,17 +364,21 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: backgroundGrey,
       appBar: AppBar(
+        backgroundColor: primaryGreen,
         title: Text('Farmer Dashboard'),
         actions: [
           IconButton(icon: Icon(Icons.logout), onPressed: _logout),
         ],
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: Colors.white,
           tabs: [
             Tab(text: 'Dashboard'),
             Tab(text: 'Add Crop'),
             Tab(text: 'Your Crops'),
+            Tab(text: 'Notifications'),
           ],
         ),
       ),
@@ -268,6 +388,7 @@ class _FarmerScreenState extends State<FarmerScreen> with SingleTickerProviderSt
           _buildDashboard(),
           _buildAddCropForm(),
           _buildYourCropsTab(),
+          _buildNotificationsTab(),
         ],
       ),
     );
@@ -329,11 +450,13 @@ class _EditCropScreenState extends State<EditCropScreen> {
     }
   }
 
-  Widget _buildEditField(TextEditingController controller, String label, {bool isNumber = false}) {
+  Widget _buildEditField(TextEditingController controller, String label,
+      {bool isNumber = false}) {
     return TextFormField(
       controller: controller,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      decoration: InputDecoration(labelText: label, border: OutlineInputBorder()),
+      decoration:
+      InputDecoration(labelText: label, border: OutlineInputBorder()),
     );
   }
 
@@ -353,7 +476,8 @@ class _EditCropScreenState extends State<EditCropScreen> {
             SizedBox(height: 10),
             GestureDetector(
               onTap: _showDatePicker,
-              child: AbsorbPointer(child: _buildEditField(_harvestDate, 'Harvest Date')),
+              child: AbsorbPointer(
+                  child: _buildEditField(_harvestDate, 'Harvest Date')),
             ),
             SizedBox(height: 10),
             _buildEditField(_location, 'Location'),
@@ -363,12 +487,14 @@ class _EditCropScreenState extends State<EditCropScreen> {
             DropdownButtonFormField<String>(
               value: _pricingType,
               items: ['fixed', 'bidding', 'negotiable']
-                  .map((type) => DropdownMenuItem(value: type, child: Text(type)))
+                  .map((type) =>
+                  DropdownMenuItem(value: type, child: Text(type)))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _pricingType = value);
               },
-              decoration: InputDecoration(labelText: 'Pricing Type', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: 'Pricing Type', border: OutlineInputBorder()),
             ),
             SizedBox(height: 20),
             ElevatedButton(
