@@ -17,7 +17,13 @@ class _FarmerScreenState extends State<FarmerScreen>
   final TextEditingController _harvestDate = TextEditingController();
   final TextEditingController _location = TextEditingController();
   final TextEditingController _description = TextEditingController();
-  final List<String> _predefinedTags = ['vegetable', 'fruit', 'grain', 'organic', 'seasonal'];
+  final List<String> _predefinedTags = [
+    'vegetable',
+    'fruit',
+    'grain',
+    'organic',
+    'seasonal'
+  ];
   List<String> _selectedTags = [];
   final Color primaryGreen = Color(0xFF4CAF50);
   final Color backgroundGrey = Color(0xFFF5F5F5);
@@ -38,7 +44,10 @@ class _FarmerScreenState extends State<FarmerScreen>
 
   Future<void> _fetchFarmerName() async {
     final uid = FirebaseAuth.instance.currentUser!.uid;
-    DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
       setState(() {
@@ -82,7 +91,8 @@ class _FarmerScreenState extends State<FarmerScreen>
         'biddingClosed': _pricingType == 'bidding' ? _biddingClosed : false,
         'timestamp': Timestamp.now(),
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Crop added successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Crop added successfully!')));
       _formKey.currentState!.reset();
       setState(() {
         _pricingType = 'fixed';
@@ -90,7 +100,8 @@ class _FarmerScreenState extends State<FarmerScreen>
         _biddingClosed = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error adding crop: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding crop: $e')));
     } finally {
       setState(() => _isSubmitting = false);
     }
@@ -136,7 +147,10 @@ class _FarmerScreenState extends State<FarmerScreen>
   }
 
   Future<String> _getBuyerName(String buyerId) async {
-    DocumentSnapshot doc = await FirebaseFirestore.instance.collection('users').doc(buyerId).get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(buyerId)
+        .get();
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
       return data['name'] ?? buyerId;
@@ -145,12 +159,41 @@ class _FarmerScreenState extends State<FarmerScreen>
   }
 
   Future<String> _getCropName(String cropId) async {
-    DocumentSnapshot doc = await FirebaseFirestore.instance.collection('crops').doc(cropId).get();
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('crops')
+        .doc(cropId)
+        .get();
     if (doc.exists) {
       final data = doc.data() as Map<String, dynamic>;
       return data['name'] ?? cropId;
     }
     return cropId;
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label,
+      {bool isNumber = false, double? maxValue}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      validator: (value) {
+        if (value == null || value.isEmpty)
+          return 'Please enter $label';
+        if (isNumber && maxValue != null) {
+          double? number = double.tryParse(value);
+          if (number == null) return 'Invalid number';
+          if (number > maxValue) {
+            return '$label cannot exceed $maxValue';
+          }
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white,
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   Widget _buildDashboard() {
@@ -162,10 +205,15 @@ class _FarmerScreenState extends State<FarmerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Dashboard', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: primaryGreen)),
+            Text('Dashboard',
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: primaryGreen)),
             SizedBox(height: 20),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
               elevation: 4,
               child: ListTile(
                 title: Text('Farmer Info'),
@@ -174,22 +222,31 @@ class _FarmerScreenState extends State<FarmerScreen>
             ),
             SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('crops').where('farmerId', isEqualTo: uid).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('crops')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
               builder: (context, snap) {
-                final totalCrops = snap.hasData ? snap.data!.docs.length : 0;
+                final totalCrops =
+                snap.hasData ? snap.data!.docs.length : 0;
                 return Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
                   elevation: 4,
                   child: ListTile(
                     title: Text('Total Crops'),
-                    trailing: Text('$totalCrops', style: TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: Text('$totalCrops',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 );
               },
             ),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('purchases').where('farmerId', isEqualTo: uid).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('purchases')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
               builder: (context, snap) {
                 double earnings = 0;
                 if (snap.hasData) {
@@ -198,24 +255,33 @@ class _FarmerScreenState extends State<FarmerScreen>
                   }
                 }
                 return Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15)),
                   elevation: 4,
                   child: ListTile(
                     title: Text('Estimated Earnings'),
-                    trailing: Text('₹${earnings.toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold)),
+                    trailing: Text('₹${earnings.toStringAsFixed(2)}',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 );
               },
             ),
             SizedBox(height: 20),
-            Text('Your Crops', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text('Your Crops',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('crops').where('farmerId', isEqualTo: uid).snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('crops')
+                  .where('farmerId', isEqualTo: uid)
+                  .snapshots(),
               builder: (context, snap) {
-                if (!snap.hasData) return Center(child: CircularProgressIndicator());
+                if (!snap.hasData)
+                  return Center(child: CircularProgressIndicator());
                 final crops = snap.data!.docs;
-                return Column(children: crops.map((doc) => _buildCropCard(doc)).toList());
+                return Column(
+                    children:
+                    crops.map((doc) => _buildCropCard(doc)).toList());
               },
             ),
           ],
@@ -233,13 +299,17 @@ class _FarmerScreenState extends State<FarmerScreen>
           children: [
             _buildTextField(_cropName, 'Crop Name'),
             SizedBox(height: 10),
-            _buildTextField(_price, 'Price (per unit)', isNumber: true),
+            _buildTextField(_price, 'Price (per unit)',
+                isNumber: true, maxValue: 10000),
             SizedBox(height: 10),
-            _buildTextField(_quantity, 'Quantity (in kg)', isNumber: true),
+            _buildTextField(_quantity, 'Quantity (in kg)',
+                isNumber: true, maxValue: 10000),
             SizedBox(height: 10),
             GestureDetector(
               onTap: _showDatePicker,
-              child: AbsorbPointer(child: _buildTextField(_harvestDate, 'Harvest Date (YYYY-MM-DD)')),
+              child: AbsorbPointer(
+                  child:
+                  _buildTextField(_harvestDate, 'Harvest Date (YYYY-MM-DD)')),
             ),
             SizedBox(height: 10),
             _buildTextField(_location, 'Location'),
@@ -249,7 +319,8 @@ class _FarmerScreenState extends State<FarmerScreen>
             DropdownButtonFormField<String>(
               value: _pricingType,
               items: ['fixed', 'bidding', 'negotiable']
-                  .map((type) => DropdownMenuItem(value: type, child: Text(type.toUpperCase())))
+                  .map((type) => DropdownMenuItem(
+                  value: type, child: Text(type.toUpperCase())))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _pricingType = value);
@@ -274,7 +345,9 @@ class _FarmerScreenState extends State<FarmerScreen>
             SizedBox(height: 20),
             Align(
               alignment: Alignment.centerLeft,
-              child: Text('Tags', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: Text('Tags',
+                  style:
+                  TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             SizedBox(height: 8),
             Wrap(
@@ -295,8 +368,10 @@ class _FarmerScreenState extends State<FarmerScreen>
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     hint: Text('Select a tag'),
-                    items: _predefinedTags.where((t) => !_selectedTags.contains(t))
-                        .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    items: _predefinedTags
+                        .where((t) => !_selectedTags.contains(t))
+                        .map((t) =>
+                        DropdownMenuItem(value: t, child: Text(t)))
                         .toList(),
                     onChanged: (value) {
                       if (value != null) {
@@ -311,7 +386,9 @@ class _FarmerScreenState extends State<FarmerScreen>
                   ),
                 ),
                 SizedBox(width: 10),
-                IconButton(icon: Icon(Icons.add, color: primaryGreen), onPressed: _showAddTagDialog),
+                IconButton(
+                    icon: Icon(Icons.add, color: primaryGreen),
+                    onPressed: _showAddTagDialog),
               ],
             ),
             SizedBox(height: 30),
@@ -320,11 +397,14 @@ class _FarmerScreenState extends State<FarmerScreen>
                 : ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: primaryGreen,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: EdgeInsets.symmetric(vertical: 16, horizontal: 32),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding:
+                EdgeInsets.symmetric(vertical: 16, horizontal: 32),
               ),
               onPressed: _submitCrop,
-              child: Text('Submit Crop', style: TextStyle(color: Colors.white)),
+              child: Text('Submit Crop',
+                  style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -337,10 +417,17 @@ class _FarmerScreenState extends State<FarmerScreen>
     return Container(
       color: backgroundGrey,
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('crops').where('farmerId', isEqualTo: uid).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('crops')
+            .where('farmerId', isEqualTo: uid)
+            .snapshots(),
         builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
-          if (!snap.hasData || snap.data!.docs.isEmpty) return Center(child: Text('No crops added yet.', style: TextStyle(fontSize: 16)));
+          if (snap.connectionState == ConnectionState.waiting)
+            return Center(child: CircularProgressIndicator());
+          if (!snap.hasData || snap.data!.docs.isEmpty)
+            return Center(
+                child: Text('No crops added yet.',
+                    style: TextStyle(fontSize: 16)));
           return ListView.builder(
             padding: EdgeInsets.all(12),
             itemCount: snap.data!.docs.length,
@@ -497,10 +584,16 @@ class _FarmerScreenState extends State<FarmerScreen>
     return Container(
       color: backgroundGrey,
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('chats').where('farmerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('chats')
+            .where('farmerId', isEqualTo: uid)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return Center(child: Text('Error loading chats: ${snapshot.error}'));
-          if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+          if (snapshot.hasError)
+            return Center(child: Text('Error loading chats: ${snapshot.error}'));
+          if (snapshot.connectionState == ConnectionState.waiting)
+            return Center(child: CircularProgressIndicator());
           final docs = snapshot.data!.docs;
           if (docs.isEmpty) return Center(child: Text('No chats available.'));
           return ListView.builder(
@@ -515,7 +608,8 @@ class _FarmerScreenState extends State<FarmerScreen>
                   title: FutureBuilder<String>(
                     future: _getCropName(data['cropId']),
                     builder: (context, snapshot) {
-                      String cropName = snapshot.hasData ? snapshot.data! : data['cropId'];
+                      String cropName =
+                      snapshot.hasData ? snapshot.data! : data['cropId'];
                       return Text(cropName);
                     },
                   ),
@@ -525,7 +619,9 @@ class _FarmerScreenState extends State<FarmerScreen>
                       FutureBuilder<String>(
                         future: _getBuyerName(data['buyerId']),
                         builder: (context, snapshot) {
-                          String buyerName = snapshot.hasData ? snapshot.data! : data['buyerId'];
+                          String buyerName = snapshot.hasData
+                              ? snapshot.data!
+                              : data['buyerId'];
                           return Text('Buyer: $buyerName');
                         },
                       ),
@@ -533,7 +629,9 @@ class _FarmerScreenState extends State<FarmerScreen>
                     ],
                   ),
                   trailing: Text(
-                    data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString() : '',
+                    data['timestamp'] != null
+                        ? (data['timestamp'] as Timestamp).toDate().toString()
+                        : '',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -550,10 +648,16 @@ class _FarmerScreenState extends State<FarmerScreen>
     return Container(
       color: backgroundGrey,
       child: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('notifications').where('farmerId', isEqualTo: uid).orderBy('timestamp', descending: true).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('notifications')
+            .where('farmerId', isEqualTo: uid)
+            .orderBy('timestamp', descending: true)
+            .snapshots(),
         builder: (context, snap) {
-          if (snap.hasError) return Center(child: Text('Error loading notifications.'));
-          if (snap.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+          if (snap.hasError)
+            return Center(child: Text('Error loading notifications.'));
+          if (snap.connectionState == ConnectionState.waiting)
+            return Center(child: CircularProgressIndicator());
           final notes = snap.data!.docs;
           if (notes.isEmpty) return Center(child: Text('No notifications.'));
           return ListView.builder(
@@ -565,17 +669,26 @@ class _FarmerScreenState extends State<FarmerScreen>
                 child: ListTile(
                   title: Text(data['title'] ?? 'Notification'),
                   subtitle: FutureBuilder<String>(
-                    future: data.containsKey('cropId') ? _getCropName(data['cropId']) : Future.value(''),
+                    future: data.containsKey('cropId')
+                        ? _getCropName(data['cropId'])
+                        : Future.value(''),
                     builder: (context, snapshot) {
-                      String cropName = snapshot.hasData ? snapshot.data! : '';
+                      String cropName =
+                      snapshot.hasData ? snapshot.data! : '';
                       if (cropName.isNotEmpty) {
-                        return Text(data['body'].toString().replaceAll(data['cropId'], cropName));
+                        return Text(data['body']
+                            .toString()
+                            .replaceAll(data['cropId'], cropName));
                       }
                       return Text(data['body'] ?? '');
                     },
                   ),
                   trailing: Text(
-                    data['timestamp'] != null ? (data['timestamp'] as Timestamp).toDate().toString() : '',
+                    data['timestamp'] != null
+                        ? (data['timestamp'] as Timestamp)
+                        .toDate()
+                        .toString()
+                        : '',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
@@ -593,13 +706,15 @@ class _FarmerScreenState extends State<FarmerScreen>
       margin: EdgeInsets.symmetric(vertical: 6),
       child: ListTile(
         title: Text(cropData['name']),
-        subtitle: Text('₹${cropData['price']} × ${cropData['quantity']}kg\nHarvest: ${cropData['harvestDate']} | ${cropData['pricingType'].toUpperCase()}'),
+        subtitle: Text(
+            '₹${cropData['price']} × ${cropData['quantity']}kg\nHarvest: ${cropData['harvestDate']} | ${cropData['pricingType'].toUpperCase()}'),
         trailing: PopupMenuButton<String>(
           onSelected: (v) {
             if (v == 'delete') {
               FirebaseFirestore.instance.collection('crops').doc(crop.id).delete();
             } else if (v == 'edit') {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => EditCropScreen(crop: crop)));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => EditCropScreen(crop: crop)));
             }
           },
           itemBuilder: (_) => [
@@ -611,19 +726,7 @@ class _FarmerScreenState extends State<FarmerScreen>
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {bool isNumber = false}) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      validator: (value) => value == null || value.isEmpty ? 'Please enter $label' : null,
-      decoration: InputDecoration(
-        filled: true,
-        fillColor: Colors.white,
-        labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -639,12 +742,36 @@ class _FarmerScreenState extends State<FarmerScreen>
           indicatorColor: Colors.white,
           indicatorSize: TabBarIndicatorSize.label,
           tabs: [
-            Tab(child: Text('Dashboard', style: _tabController.index == 0 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
-            Tab(child: Text('Add Crop', style: _tabController.index == 1 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
-            Tab(child: Text('Your Crops', style: _tabController.index == 2 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
-            Tab(child: Text('Bids', style: _tabController.index == 3 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
-            Tab(child: Text('Chats', style: _tabController.index == 4 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
-            Tab(child: Text('Notifications', style: _tabController.index == 5 ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold) : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Dashboard',
+                    style: _tabController.index == 0
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Add Crop',
+                    style: _tabController.index == 1
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Your Crops',
+                    style: _tabController.index == 2
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Bids',
+                    style: _tabController.index == 3
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Chats',
+                    style: _tabController.index == 4
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
+            Tab(
+                child: Text('Notifications',
+                    style: _tabController.index == 5
+                        ? TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+                        : TextStyle(fontSize: 14))),
           ],
         ),
       ),
@@ -679,7 +806,13 @@ class _EditCropScreenState extends State<EditCropScreen> {
   late TextEditingController _description;
   String _pricingType = 'fixed';
   bool _biddingClosed = false;
-  final List<String> _predefinedTags = ['vegetable', 'fruit', 'grain', 'organic', 'seasonal'];
+  final List<String> _predefinedTags = [
+    'vegetable',
+    'fruit',
+    'grain',
+    'organic',
+    'seasonal'
+  ];
   late List<String> _selectedTags;
 
   @override
@@ -758,7 +891,8 @@ class _EditCropScreenState extends State<EditCropScreen> {
             Expanded(
               child: DropdownButtonFormField<String>(
                 hint: Text('Select a tag'),
-                items: _predefinedTags.where((t) => !_selectedTags.contains(t))
+                items: _predefinedTags
+                    .where((t) => !_selectedTags.contains(t))
                     .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                     .toList(),
                 onChanged: (t) {
@@ -780,10 +914,25 @@ class _EditCropScreenState extends State<EditCropScreen> {
   }
 
   void _updateCrop() async {
-    await FirebaseFirestore.instance.collection('crops').doc(widget.crop.id).update({
+    double? price = double.tryParse(_price.text);
+    int? quantity = int.tryParse(_quantity.text);
+    if (price == null || price > 10000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Price cannot exceed 10,000')));
+      return;
+    }
+    if (quantity == null || quantity > 10000) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Quantity cannot exceed 10,000')));
+      return;
+    }
+    await FirebaseFirestore.instance
+        .collection('crops')
+        .doc(widget.crop.id)
+        .update({
       'name': _name.text,
-      'price': double.parse(_price.text),
-      'quantity': int.parse(_quantity.text),
+      'price': price,
+      'quantity': quantity,
       'harvestDate': _harvestDate.text,
       'location': _location.text,
       'description': _description.text,
@@ -794,13 +943,15 @@ class _EditCropScreenState extends State<EditCropScreen> {
     Navigator.pop(context);
   }
 
-  Widget _buildEditField(TextEditingController c, String label, {bool isNumber = false}) =>
+  Widget _buildEditField(TextEditingController c, String label,
+      {bool isNumber = false}) =>
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: TextFormField(
           controller: c,
           keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-          decoration: InputDecoration(labelText: label, border: OutlineInputBorder()),
+          decoration: InputDecoration(
+              labelText: label, border: OutlineInputBorder()),
         ),
       );
 
@@ -824,21 +975,26 @@ class _EditCropScreenState extends State<EditCropScreen> {
                   initialDate: DateTime.parse(_harvestDate.text),
                 );
                 if (d != null)
-                  setState(() => _harvestDate.text = d.toIso8601String().split('T').first);
+                  setState(() => _harvestDate.text =
+                      d.toIso8601String().split('T').first);
               },
-              child: AbsorbPointer(child: _buildEditField(_harvestDate, 'Harvest Date')),
+              child: AbsorbPointer(
+                  child: _buildEditField(_harvestDate, 'Harvest Date')),
             ),
             _buildEditField(_location, 'Location'),
             _buildEditField(_description, 'Description'),
             DropdownButtonFormField<String>(
               value: _pricingType,
               items: ['fixed', 'bidding', 'negotiable']
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t.toUpperCase())))
+                  .map((t) =>
+                  DropdownMenuItem(value: t, child: Text(t.toUpperCase())))
                   .toList(),
               onChanged: (v) {
                 if (v != null) setState(() => _pricingType = v);
               },
-              decoration: InputDecoration(labelText: 'Pricing Type', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  labelText: 'Pricing Type',
+                  border: OutlineInputBorder()),
             ),
             if (_pricingType == 'bidding')
               SwitchListTile(
