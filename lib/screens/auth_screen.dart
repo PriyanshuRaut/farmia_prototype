@@ -15,23 +15,67 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _password = TextEditingController();
   bool _isLoading = false;
 
-
-
   void _login() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      UserCredential user = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: _email.text, password: _password.text);
-      DocumentSnapshot snap = await FirebaseFirestore.instance.collection("users").doc(user.user!.uid).get();
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+          email: _email.text.trim(), password: _password.text);
+
+      if (!userCredential.user!.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text('Email Not Verified'),
+                content: Text(
+                    'Your email has not been verified yet. Please check your inbox and verify your email before logging in.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('OK'))
+                ],
+              );
+            });
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      DocumentSnapshot snap = await FirebaseFirestore.instance
+          .collection("users")
+          .doc(userCredential.user!.uid)
+          .get();
+
       if (snap.exists && snap.data() != null) {
         Map data = snap.data() as Map;
         if (data['role'] == 'farmer') {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => FarmerScreen()));
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => FarmerScreen()));
         } else {
-          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BuyerScreen()));
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (_) => BuyerScreen()));
         }
+      } else {
+        await FirebaseAuth.instance.signOut();
+        showDialog(
+            context: context,
+            builder: (context) {
+              return AlertDialog(
+                title: Text('User Not Registered'),
+                content: Text(
+                    'No registration record found. Please register before logging in.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('OK'))
+                ],
+              );
+            });
       }
     } catch (e) {
       showDialog(
@@ -41,7 +85,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 title: Text('Error'),
                 content: Text(e.toString()),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('OK'))
                 ]);
           });
     }
@@ -49,42 +95,77 @@ class _AuthScreenState extends State<AuthScreen> {
       _isLoading = false;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(gradient: LinearGradient(colors: [Colors.green.shade800, Colors.greenAccent], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+        decoration: BoxDecoration(
+            gradient: LinearGradient(
+                colors: [Colors.green.shade800, Colors.greenAccent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight)),
         padding: EdgeInsets.all(24),
         child: Center(
           child: SingleChildScrollView(
             child: Column(
               children: [
-                Text('Farmia', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white)),
+                Text('Farmia',
+                    style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
                 SizedBox(height: 20),
                 TextField(
                   controller: _email,
                   style: TextStyle(color: Colors.white),
-                  decoration: InputDecoration(hintText: 'Email', hintStyle: TextStyle(color: Colors.white70), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white70)), focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white))),
+                  decoration: InputDecoration(
+                      hintText: 'Email',
+                      hintStyle: TextStyle(color: Colors.white70),
+                      enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white70)),
+                      focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white))),
                 ),
                 SizedBox(height: 16),
                 TextField(
                   controller: _password,
                   obscureText: true,
                   style: TextStyle(color: Colors.white),
-                  decoration: InputDecoration(hintText: 'Password', hintStyle: TextStyle(color: Colors.white70), enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white70)), focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white))),
+                  decoration: InputDecoration(
+                      hintText: 'Password',
+                      hintStyle: TextStyle(color: Colors.white70),
+                      enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white70)),
+                      focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white))),
                 ),
                 SizedBox(height: 16),
-                _isLoading ? CircularProgressIndicator() : ElevatedButton(
-                  style: ElevatedButton.styleFrom(foregroundColor: Colors.green, backgroundColor: Colors.white, padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30))),
+                _isLoading
+                    ? CircularProgressIndicator()
+                    : ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.green,
+                      backgroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 50, vertical: 15),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30))),
                   onPressed: _login,
-                  child: Text('Login', style: TextStyle(fontSize: 18)),
+                  child: Text('Login',
+                      style: TextStyle(fontSize: 18)),
                 ),
                 SizedBox(height: 16),
                 TextButton(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => RegisterScreen()));
                   },
-                  child: Text('Register', style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  child: Text('Register',
+                      style:
+                      TextStyle(color: Colors.white70, fontSize: 16)),
                 )
               ],
             ),

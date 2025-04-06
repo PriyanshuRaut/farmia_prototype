@@ -22,33 +22,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
     try {
-      UserCredential user = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
           email: _email.text.trim(), password: _password.text);
-      String uid = user.user!.uid;
+
+      await userCredential.user!.sendEmailVerification();
+
+      String uid = userCredential.user!.uid;
       Map<String, dynamic> userData = {
         'name': _name.text,
         'email': _email.text.trim(),
         'role': _role,
         'createdAt': FieldValue.serverTimestamp()
       };
+
       await FirebaseFirestore.instance.collection('users').doc(uid).set(userData);
+
       if (_role == 'farmer') {
         await FirebaseFirestore.instance.collection('farmer').doc(uid).set(userData);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => FarmerScreen()));
       } else {
         await FirebaseFirestore.instance.collection('buyers').doc(uid).set(userData);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => BuyerScreen()));
       }
+
+      await FirebaseAuth.instance.signOut();
+      showDialog(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: Text('Email Verification'),
+              content: Text(
+                  'A verification email has been sent to your email address. Please verify your email before logging in.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.pop(context);
+                  },
+                  child: Text('OK'),
+                )
+              ],
+            );
+          });
     } catch (e) {
       showDialog(
           context: context,
           builder: (context) {
             return AlertDialog(
-                title: Text('Error'),
-                content: Text(e.toString()),
-                actions: [
-                  TextButton(onPressed: () => Navigator.pop(context), child: Text('OK'))
-                ]);
+              title: Text('Error'),
+              content: Text(e.toString()),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('OK'))
+              ],
+            );
           });
     }
     setState(() {
