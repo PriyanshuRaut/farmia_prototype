@@ -43,10 +43,29 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       'message': message,
       'timestamp': Timestamp.now(),
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Message sent!')),
+    );
   }
 
   Future<void> placeBid(double bid) async {
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
+    final bidQuery = await FirebaseFirestore.instance
+        .collection('bids')
+        .where('cropId', isEqualTo: widget.cropId)
+        .orderBy('bid', descending: true)
+        .limit(1)
+        .get();
+    double highestBid = 0;
+    if (bidQuery.docs.isNotEmpty) {
+      highestBid = (bidQuery.docs.first.data()['bid'] as num).toDouble();
+    }
+    if (bid <= highestBid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Your bid must be higher than the current highest bid of ₹$highestBid')),
+      );
+      return;
+    }
     await FirebaseFirestore.instance.collection('bids').add({
       'cropId': widget.cropId,
       'farmerId': widget.cropData['farmerId'],
@@ -54,13 +73,15 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       'bid': bid,
       'timestamp': Timestamp.now(),
     });
-
     await FirebaseFirestore.instance.collection('notifications').add({
       'farmerId': widget.cropData['farmerId'],
       'title': 'New Bid',
-      'body': 'A buyer placed a bid of ₹$bid on ${widget.cropData['name']}',
+      'body': 'A buyer placed a bid of ₹$bid on ${capitalize(widget.cropData['name'])}',
       'timestamp': Timestamp.now(),
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Bid placed successfully!')),
+    );
   }
 
   Future<void> negotiatePrice(double offer) async {
@@ -72,40 +93,35 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       'offer': offer,
       'timestamp': Timestamp.now(),
     });
-
     await FirebaseFirestore.instance.collection('notifications').add({
       'farmerId': widget.cropData['farmerId'],
       'title': 'Negotiation Request',
-      'body': 'A buyer offered ₹$offer for ${widget.cropData['name']}',
+      'body': 'A buyer offered ₹$offer for ${capitalize(widget.cropData['name'])}',
       'timestamp': Timestamp.now(),
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Negotiation sent successfully!')),
+    );
   }
 
   Future<void> buyCrop() async {
     final cropRef = FirebaseFirestore.instance.collection('crops').doc(widget.cropId);
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
-
     try {
       await FirebaseFirestore.instance.runTransaction((transaction) async {
         final cropSnapshot = await transaction.get(cropRef);
-
         if (!cropSnapshot.exists) throw Exception("Crop not found");
-
         final cropData = cropSnapshot.data()!;
         final currentQty = cropData['quantity'];
         final price = cropData['price'];
         final farmerId = cropData['farmerId'];
         final cropName = cropData['name'];
-
         if (_quantity > currentQty) {
           throw Exception("Not enough quantity available");
         }
-
         final newQty = currentQty - _quantity;
         final total = price * _quantity;
-
         transaction.update(cropRef, {'quantity': newQty});
-
         final purchaseRef = FirebaseFirestore.instance.collection('purchases').doc();
         transaction.set(purchaseRef, {
           'cropId': widget.cropId,
@@ -116,20 +132,17 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           'total': total,
           'timestamp': Timestamp.now(),
         });
-
         final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
         transaction.set(notifRef, {
           'farmerId': farmerId,
           'title': 'New Purchase',
-          'body': 'A buyer bought $_quantity kg of $cropName',
+          'body': 'A buyer bought $_quantity kg of ${capitalize(cropName)}',
           'timestamp': Timestamp.now(),
         });
-
         setState(() {
           widget.cropData['quantity'] = newQty;
         });
       });
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Purchase successful!')),
       );
@@ -140,13 +153,43 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
     }
   }
 
+  String capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1).toLowerCase();
+  }
+
+  Widget buildBidHistory() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('bids')
+          .where('cropId', isEqualTo: widget.cropId)
+          .orderBy('bid', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) return SizedBox.shrink();
+        final bids = snapshot.data!.docs;
+        if (bids.isEmpty) return Text('No bids yet.');
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Bid History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            SizedBox(height: 8),
+            ...bids.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return Text('₹${data['bid']} by ${data['buyerId']}');
+            }).toList(),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final crop = widget.cropData;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(crop['name'], style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(capitalize(crop['name']), style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: Colors.teal.shade600,
         elevation: 3,
@@ -166,7 +209,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(crop['name'], style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+                  Text(capitalize(crop['name']), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
                   SizedBox(height: 10),
                   detailRow("Price", "₹${crop['price']}"),
                   detailRow("Available", "${crop['quantity']} kg"),
@@ -176,11 +219,11 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
                   Text("Description", style: TextStyle(fontWeight: FontWeight.w600)),
                   Text(crop['description'], style: TextStyle(color: Colors.black87)),
                   SizedBox(height: 10),
-                  Text("Pricing Type: ${crop['pricingType']}", style: TextStyle(color: Colors.grey.shade700)),
+                  Text("Pricing Type: ${capitalize(crop['pricingType'].toString())}", style: TextStyle(color: Colors.grey.shade700)),
                   if (farmerData != null) ...[
                     Divider(height: 30),
                     Text("Farmer Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                    Text("Name: ${farmerData!['name']}"),
+                    Text("Name: ${capitalize(farmerData!['name'])}"),
                     Text("Email: ${farmerData!['email']}"),
                   ]
                 ],
@@ -201,7 +244,11 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
               ),
             ),
             if (crop['pricingType'] == 'fixed') buildFixedPricingCard(crop),
-            if (crop['pricingType'] == 'bidding') buildBidCard(),
+            if (crop['pricingType'] == 'bidding') ...[
+              buildBidCard(),
+              SizedBox(height: 20),
+              buildBidHistory(),
+            ],
             if (crop['pricingType'] == 'negotiable') buildNegotiationCard(),
           ],
         ),

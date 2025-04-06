@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
-        android:label="farmia_prototype"
+        android:label="Farmia(Prototype)"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
