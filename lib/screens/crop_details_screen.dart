@@ -50,6 +50,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
 
   Future<void> placeBid(double bid) async {
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
+    final buyerName = FirebaseAuth.instance.currentUser!.displayName ?? 'Unknown Buyer';
     final bidQuery = await FirebaseFirestore.instance
         .collection('bids')
         .where('cropId', isEqualTo: widget.cropId)
@@ -70,6 +71,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       'cropId': widget.cropId,
       'farmerId': widget.cropData['farmerId'],
       'buyerId': buyerId,
+      'buyerName': buyerName,
       'bid': bid,
       'timestamp': Timestamp.now(),
     });
@@ -169,16 +171,27 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
         if (!snapshot.hasData) return SizedBox.shrink();
         final bids = snapshot.data!.docs;
         if (bids.isEmpty) return Text('No bids yet.');
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Bid History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            SizedBox(height: 8),
-            ...bids.map((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              return Text('₹${data['bid']} by ${data['buyerId']}');
-            }).toList(),
-          ],
+        return buildCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Bid History', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              SizedBox(height: 12),
+              ...bids.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final buyerName = data['buyerName'] ?? data['buyerId'];
+                final bidAmount = data['bid'];
+                final timestamp = (data['timestamp'] as Timestamp).toDate();
+                return ListTile(
+                  leading: Icon(Icons.account_circle, size: 36),
+                  title: Text("₹$bidAmount", style: TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text("By $buyerName\n${timestamp.toLocal()}"),
+                  isThreeLine: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                );
+              }).toList(),
+            ],
+          ),
         );
       },
     );

@@ -254,8 +254,8 @@ class _FarmerScreenState extends State<FarmerScreen>
             DropdownButtonFormField<String>(
               value: _pricingType,
               items: ['fixed', 'bidding', 'negotiable']
-                  .map((type) => DropdownMenuItem(
-                  value: type, child: Text(type.toUpperCase())))
+                  .map((type) =>
+                  DropdownMenuItem(value: type, child: Text(type.toUpperCase())))
                   .toList(),
               onChanged: (value) {
                 if (value != null) setState(() => _pricingType = value);
@@ -271,8 +271,7 @@ class _FarmerScreenState extends State<FarmerScreen>
             Align(
               alignment: Alignment.centerLeft,
               child: Text('Tags',
-                  style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
             SizedBox(height: 8),
             Wrap(
@@ -329,8 +328,8 @@ class _FarmerScreenState extends State<FarmerScreen>
                 EdgeInsets.symmetric(vertical: 16, horizontal: 32),
               ),
               onPressed: _submitCrop,
-              child: Text('Submit Crop',
-                  style: TextStyle(color: Colors.white)),
+              child:
+              Text('Submit Crop', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -377,15 +376,21 @@ class _FarmerScreenState extends State<FarmerScreen>
             .where('farmerId', isEqualTo: uid)
             .orderBy('timestamp', descending: true)
             .snapshots(),
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting)
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error loading bids: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
-          if (!snap.hasData || snap.data!.docs.isEmpty)
+          }
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) {
             return Center(child: Text('No bids received yet.'));
+          }
           return ListView.builder(
-            itemCount: snap.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final bidDoc = snap.data!.docs[index];
+              final bidDoc = docs[index];
               final data = bidDoc.data() as Map<String, dynamic>;
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 6),
@@ -441,7 +446,8 @@ class _FarmerScreenState extends State<FarmerScreen>
     await FirebaseFirestore.instance.collection('notifications').add({
       'farmerId': data['farmerId'],
       'title': 'Bid Stopped',
-      'body': 'The bid of ₹${data['bid']} on crop ${data['cropId']} has been stopped.',
+      'body':
+      'The bid of ₹${data['bid']} on crop ${data['cropId']} has been stopped.',
       'timestamp': Timestamp.now(),
     });
     ScaffoldMessenger.of(context).showSnackBar(
@@ -459,15 +465,22 @@ class _FarmerScreenState extends State<FarmerScreen>
             .where('farmerId', isEqualTo: uid)
             .orderBy('timestamp', descending: true)
             .snapshots(),
-        builder: (context, snap) {
-          if (!snap.hasData) return Center(child: CircularProgressIndicator());
-          if (snap.data!.docs.isEmpty)
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error loading chats: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+          final docs = snapshot.data!.docs;
+          if (docs.isEmpty) {
             return Center(child: Text('No chats available.'));
+          }
           return ListView.builder(
             padding: EdgeInsets.all(12),
-            itemCount: snap.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final chatDoc = snap.data!.docs[index];
+              final chatDoc = docs[index];
               final data = chatDoc.data() as Map<String, dynamic>;
               return Card(
                 margin: EdgeInsets.symmetric(vertical: 6),
@@ -502,7 +515,10 @@ class _FarmerScreenState extends State<FarmerScreen>
             .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snap) {
-          if (!snap.hasData)
+          if (snap.hasError) {
+            return Center(child: Text('Error loading notifications.'));
+          }
+          if (snap.connectionState == ConnectionState.waiting)
             return Center(child: CircularProgressIndicator());
           final notes = snap.data!.docs;
           if (notes.isEmpty)
@@ -544,7 +560,10 @@ class _FarmerScreenState extends State<FarmerScreen>
         trailing: PopupMenuButton<String>(
           onSelected: (v) {
             if (v == 'delete') {
-              FirebaseFirestore.instance.collection('crops').doc(crop.id).delete();
+              FirebaseFirestore.instance
+                  .collection('crops')
+                  .doc(crop.id)
+                  .delete();
             } else if (v == 'edit') {
               Navigator.push(
                 context,
@@ -672,6 +691,7 @@ class _EditCropScreenState extends State<EditCropScreen> {
     'seasonal'
   ];
   late List<String> _selectedTags;
+
   @override
   void initState() {
     super.initState();
@@ -685,6 +705,7 @@ class _EditCropScreenState extends State<EditCropScreen> {
     _pricingType = data['pricingType'];
     _selectedTags = List<String>.from(data['tags'] ?? []);
   }
+
   @override
   void dispose() {
     _name.dispose();
@@ -695,6 +716,7 @@ class _EditCropScreenState extends State<EditCropScreen> {
     _description.dispose();
     super.dispose();
   }
+
   void _showAddTagDialog() {
     final ctrl = TextEditingController();
     showDialog(
@@ -721,6 +743,7 @@ class _EditCropScreenState extends State<EditCropScreen> {
       ),
     );
   }
+
   Widget _buildTagSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,8 +786,12 @@ class _EditCropScreenState extends State<EditCropScreen> {
       ],
     );
   }
+
   void _updateCrop() async {
-    await FirebaseFirestore.instance.collection('crops').doc(widget.crop.id).update({
+    await FirebaseFirestore.instance
+        .collection('crops')
+        .doc(widget.crop.id)
+        .update({
       'name': _name.text,
       'price': double.parse(_price.text),
       'quantity': int.parse(_quantity.text),
@@ -776,7 +803,9 @@ class _EditCropScreenState extends State<EditCropScreen> {
     });
     Navigator.pop(context);
   }
-  Widget _buildEditField(TextEditingController c, String label, {bool isNumber = false}) =>
+
+  Widget _buildEditField(TextEditingController c, String label,
+      {bool isNumber = false}) =>
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: TextFormField(
@@ -785,6 +814,7 @@ class _EditCropScreenState extends State<EditCropScreen> {
           decoration: InputDecoration(labelText: label, border: OutlineInputBorder()),
         ),
       );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -804,9 +834,11 @@ class _EditCropScreenState extends State<EditCropScreen> {
                   lastDate: DateTime(2100),
                   initialDate: DateTime.parse(_harvestDate.text),
                 );
-                if (d != null) _harvestDate.text = d.toIso8601String().split('T').first;
+                if (d != null)
+                  setState(() => _harvestDate.text = d.toIso8601String().split('T').first);
               },
-              child: AbsorbPointer(child: _buildEditField(_harvestDate, 'Harvest Date')),
+              child: AbsorbPointer(
+                  child: _buildEditField(_harvestDate, 'Harvest Date')),
             ),
             _buildEditField(_location, 'Location'),
             _buildEditField(_description, 'Description'),
