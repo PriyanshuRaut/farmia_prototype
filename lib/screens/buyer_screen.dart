@@ -5,7 +5,6 @@ import 'crop_details_screen.dart';
 
 class BuyerScreen extends StatefulWidget {
   const BuyerScreen({Key? key}) : super(key: key);
-
   @override
   _BuyerScreenState createState() => _BuyerScreenState();
 }
@@ -116,11 +115,21 @@ class _BuyerScreenState extends State<BuyerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Buyer Panel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: Text('Buyer Panel',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         backgroundColor: Colors.deepPurpleAccent,
         elevation: 2,
         actions: [
+          IconButton(
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => BuyerNotificationsScreen())),
+            icon: Icon(Icons.notifications),
+            tooltip: 'Notifications',
+            style: IconButton.styleFrom(backgroundColor: Colors.white),
+          ),
           IconButton(
             onPressed: () => _logout(context),
             icon: Icon(Icons.logout),
@@ -197,16 +206,19 @@ class _BuyerScreenState extends State<BuyerScreen> {
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance.collection('crops').snapshots(),
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    return Center(child: CircularProgressIndicator());
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(child: Text('No crops available', style: TextStyle(color: Colors.black87, fontSize: 18)));
+                    return Center(child: Text('No crops available',
+                        style: TextStyle(color: Colors.black87, fontSize: 18)));
                   }
                   final filteredDocs = snapshot.data!.docs.where((doc) {
                     final crop = doc.data() as Map<String, dynamic>;
                     return _filterCrop(crop);
                   }).toList();
                   if (filteredDocs.isEmpty) {
-                    return Center(child: Text('No matching crops found', style: TextStyle(color: Colors.black87, fontSize: 18)));
+                    return Center(child: Text('No matching crops found',
+                        style: TextStyle(color: Colors.black87, fontSize: 18)));
                   }
                   return ListView.builder(
                     padding: EdgeInsets.all(12),
@@ -224,18 +236,28 @@ class _BuyerScreenState extends State<BuyerScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('₹${crop['price']} - ${capitalize(crop['pricingType'].toString())}', style: TextStyle(fontSize: 15, color: Colors.grey[700])),
+                              Text('₹${crop['price']} - ${capitalize(crop['pricingType'].toString())}',
+                                  style: TextStyle(fontSize: 15, color: Colors.grey[700])),
                               if (crop.containsKey('location'))
-                                Text('Location: ${crop['location']}', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                Text('Location: ${crop['location']}',
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                               if (crop.containsKey('availableQuantity'))
-                                Text('Available: ${crop['availableQuantity']} units', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                Text('Available: ${crop['availableQuantity']} units',
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                               if (crop.containsKey('tags'))
-                                Text('Tags: ${(crop['tags'] as List).join(', ')}', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                                Text('Tags: ${(crop['tags'] as List).join(', ')}',
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                             ],
                           ),
                           trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[600]),
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => CropDetailsScreen(cropId: doc.id, cropData: crop)));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => CropDetailsScreen(
+                                    cropId: doc.id, cropData: crop),
+                              ),
+                            );
                           },
                         ),
                       );
@@ -246,6 +268,65 @@ class _BuyerScreenState extends State<BuyerScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class BuyerNotificationsScreen extends StatelessWidget {
+  const BuyerNotificationsScreen({Key? key}) : super(key: key);
+
+  Future<List<Map<String, dynamic>>> _fetchNotifications() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('notifications')
+        .where('buyerId', isEqualTo: uid)
+        .orderBy('timestamp', descending: true)
+        .get();
+    return snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+  }
+
+  String _formatTimestamp(Timestamp timestamp) {
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Notifications', style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white)),
+        backgroundColor: Colors.deepPurpleAccent,
+      ),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchNotifications(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
+          final notifications = snapshot.data!;
+          if (notifications.isEmpty)
+            return Center(child: Text('No notifications available.'));
+          return ListView.builder(
+            padding: EdgeInsets.all(12),
+            itemCount: notifications.length,
+            itemBuilder: (context, index) {
+              final data = notifications[index];
+              return Card(
+                margin: EdgeInsets.symmetric(vertical: 6),
+                child: ListTile(
+                  title: Text(data['title'] ?? 'Notification'),
+                  subtitle: Text(data['body'] ?? ''),
+                  trailing: Text(
+                    data['timestamp'] != null
+                        ? _formatTimestamp(data['timestamp'])
+                        : '',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

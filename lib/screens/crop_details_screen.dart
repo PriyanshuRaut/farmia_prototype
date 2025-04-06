@@ -5,9 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class CropDetailsScreen extends StatefulWidget {
   final String cropId;
   final Map<String, dynamic> cropData;
-
   CropDetailsScreen({required this.cropId, required this.cropData});
-
   @override
   _CropDetailsScreenState createState() => _CropDetailsScreenState();
 }
@@ -18,13 +16,11 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
   final _bidController = TextEditingController();
   final _negotiateController = TextEditingController();
   Map<String, dynamic>? farmerData;
-
   @override
   void initState() {
     super.initState();
     fetchFarmerData();
   }
-
   Future<void> fetchFarmerData() async {
     final farmerId = widget.cropData['farmerId'];
     final doc = await FirebaseFirestore.instance.collection('users').doc(farmerId).get();
@@ -32,14 +28,24 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       setState(() => farmerData = doc.data());
     }
   }
-
+  Future<String> getBuyerName() async {
+    final buyerId = FirebaseAuth.instance.currentUser!.uid;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(buyerId).get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      return data['name'] ?? 'Unknown Buyer';
+    }
+    return 'Unknown Buyer';
+  }
   Future<void> sendMessage(String message) async {
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
+    final buyerName = await getBuyerName();
     final chatRef = FirebaseFirestore.instance.collection('chats').doc();
     await chatRef.set({
       'cropId': widget.cropId,
       'farmerId': widget.cropData['farmerId'],
       'buyerId': buyerId,
+      'buyerName': buyerName,
       'message': message,
       'timestamp': Timestamp.now(),
     });
@@ -47,10 +53,9 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       SnackBar(content: Text('Message sent!')),
     );
   }
-
   Future<void> placeBid(double bid) async {
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
-    final buyerName = FirebaseAuth.instance.currentUser!.displayName ?? 'Unknown Buyer';
+    final buyerName = await getBuyerName();
     final bidQuery = await FirebaseFirestore.instance
         .collection('bids')
         .where('cropId', isEqualTo: widget.cropId)
@@ -85,7 +90,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       SnackBar(content: Text('Bid placed successfully!')),
     );
   }
-
   Future<void> negotiatePrice(double offer) async {
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
     await FirebaseFirestore.instance.collection('negotiations').add({
@@ -105,7 +109,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       SnackBar(content: Text('Negotiation sent successfully!')),
     );
   }
-
   Future<void> buyCrop() async {
     final cropRef = FirebaseFirestore.instance.collection('crops').doc(widget.cropId);
     final buyerId = FirebaseAuth.instance.currentUser!.uid;
@@ -124,6 +127,7 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
         final newQty = currentQty - _quantity;
         final total = price * _quantity;
         transaction.update(cropRef, {'quantity': newQty});
+
         final purchaseRef = FirebaseFirestore.instance.collection('purchases').doc();
         transaction.set(purchaseRef, {
           'cropId': widget.cropId,
@@ -134,13 +138,23 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
           'total': total,
           'timestamp': Timestamp.now(),
         });
-        final notifRef = FirebaseFirestore.instance.collection('notifications').doc();
-        transaction.set(notifRef, {
+
+        final farmerNotifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        transaction.set(farmerNotifRef, {
           'farmerId': farmerId,
           'title': 'New Purchase',
-          'body': 'A buyer bought $_quantity kg of ${capitalize(cropName)}',
+          'body': 'A buyer purchased $_quantity kg of ${capitalize(cropName)}.',
           'timestamp': Timestamp.now(),
         });
+
+        final buyerNotifRef = FirebaseFirestore.instance.collection('notifications').doc();
+        transaction.set(buyerNotifRef, {
+          'buyerId': buyerId,
+          'title': 'Purchase Successful',
+          'body': 'You successfully purchased $_quantity kg of ${capitalize(cropName)} for ₹${total.toStringAsFixed(2)}.',
+          'timestamp': Timestamp.now(),
+        });
+
         setState(() {
           widget.cropData['quantity'] = newQty;
         });
@@ -154,12 +168,10 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       );
     }
   }
-
   String capitalize(String s) {
     if (s.isEmpty) return s;
     return s[0].toUpperCase() + s.substring(1).toLowerCase();
   }
-
   Widget buildBidHistory() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -196,7 +208,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       },
     );
   }
-
   @override
   Widget build(BuildContext context) {
     final crop = widget.cropData;
@@ -256,11 +267,19 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
                 ],
               ),
             ),
-            if (crop['pricingType'] == 'fixed') buildFixedPricingCard(crop),
+            if (crop['pricingType'] == 'fixed')
+              buildFixedPricingCard(crop),
             if (crop['pricingType'] == 'bidding') ...[
-              buildBidCard(),
-              SizedBox(height: 20),
-              buildBidHistory(),
+              if (crop.containsKey('biddingClosed') && crop['biddingClosed'] == true)
+                buildCard(
+                  child: Text('Bidding is closed. No new bids are accepted.',
+                      style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                )
+              else ...[
+                buildBidCard(),
+                SizedBox(height: 20),
+                buildBidHistory(),
+              ],
             ],
             if (crop['pricingType'] == 'negotiable') buildNegotiationCard(),
           ],
@@ -268,7 +287,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ),
     );
   }
-
   Widget buildCard({required Widget child}) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -280,7 +298,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ),
     );
   }
-
   Widget detailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
@@ -292,7 +309,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ),
     );
   }
-
   InputDecoration inputDecoration(String label) {
     return InputDecoration(
       labelText: label,
@@ -300,7 +316,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
     );
   }
-
   Widget buildButton(String label, Color color, VoidCallback onPressed) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
@@ -312,7 +327,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       child: Text(label, style: TextStyle(fontSize: 16, color: Colors.white)),
     );
   }
-
   Widget buildFixedPricingCard(Map<String, dynamic> crop) {
     return buildCard(
       child: Column(
@@ -341,7 +355,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ),
     );
   }
-
   Widget buildBidCard() {
     return buildCard(
       child: Column(
@@ -359,7 +372,6 @@ class _CropDetailsScreenState extends State<CropDetailsScreen> {
       ),
     );
   }
-
   Widget buildNegotiationCard() {
     return buildCard(
       child: Column(
